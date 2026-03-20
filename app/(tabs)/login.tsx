@@ -1,4 +1,7 @@
 import React, { useState } from "react";
+import { auth } from "../../config/firebaseConfig";
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { useRouter, Link } from "expo-router";
 import {
   StyleSheet,
   Text,
@@ -9,15 +12,22 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
-import { Link } from "expo-router";
 
 export default function LoginScreen() {
-  const [email, setEmail] = useState("");
-  const [senha, setSenha] = useState("");
+  const router = useRouter();
   const [form, setForm] = useState({
     email: "",
     senha: "",
   })
+  const handleLogin = async () => {
+    try {
+      await signInWithEmailAndPassword(auth, form.email, form.senha);
+      // Se der certo, redireciona para a home (tabs)
+      router.replace("../(tabs)/userPage"); 
+    } catch (Alert){
+      console.log("Erro de Login", "E-mail ou senha incorretos.", Alert);
+    }
+  };
 
   return (
     <ImageBackground
@@ -64,8 +74,8 @@ export default function LoginScreen() {
               placeholder="********"
               placeholderTextColor="#999"
               secureTextEntry
-              value={senha}
-              onChangeText={setSenha}
+              value={form.senha}
+              onChangeText={(val) => setForm({ ...form, senha: val })}
             />
           </View>
 
@@ -75,7 +85,7 @@ export default function LoginScreen() {
 
           <TouchableOpacity
             style={styles.btnLogin}
-            onPress={() => console.log("Login:", email)}
+            onPress={handleLogin}
             activeOpacity={0.8}
           >
             <Text style={styles.btnText}>Acessar sua conta</Text>
@@ -85,7 +95,7 @@ export default function LoginScreen() {
         {/* Link para Cadastro */}
         <View style={styles.footer}>
           <Text style={styles.footerText}>Ainda não tem conta? </Text>
-          <Link href="/register" asChild>
+          <Link href="/register">
             <TouchableOpacity>
               <Text style={styles.linkText}>Cadastre-se</Text>
             </TouchableOpacity>
@@ -94,6 +104,7 @@ export default function LoginScreen() {
       </KeyboardAvoidingView>
     </ImageBackground>
   );
+  
 }
 
 const validateEmail = (email: string) => {
