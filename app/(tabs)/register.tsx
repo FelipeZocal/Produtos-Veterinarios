@@ -112,7 +112,7 @@ export default function RegisterScreen() {
               style={[
                 styles.input,
                 form.email.length > 0 &&
-                  !validateEmail(form.email) && { borderColor: "red" },
+                !validateEmail(form.email) && { borderColor: "red" },
               ]}
               placeholder="Seu e-mail"
               placeholderTextColor="#999"
@@ -145,11 +145,11 @@ export default function RegisterScreen() {
             <Text style={styles.btnText}>CRIAR CONTA</Text>
           </TouchableOpacity>
           <Text style={styles.footerText}>Ja possuí conta? </Text>
-                    <Link href="/register">
-                      <TouchableOpacity>
-                        <Text style={styles.linkText}>Realize o login!</Text>
-                      </TouchableOpacity>
-                    </Link>
+          <Link href="/login">
+            <TouchableOpacity>
+              <Text style={styles.linkText}>Realize o login!</Text>
+            </TouchableOpacity>
+          </Link>
         </View>
       </View>
     </ImageBackground>

@@ -23,8 +23,8 @@ export default function LoginScreen() {
     try {
       await signInWithEmailAndPassword(auth, form.email, form.senha);
       // Se der certo, redireciona para a home (tabs)
-      router.replace("../(tabs)/userPage"); 
-    } catch (Alert){
+      router.replace("../(tabs)/userPage");
+    } catch (Alert) {
       console.log("Erro de Login", "E-mail ou senha incorretos.", Alert);
     }
   };
@@ -48,24 +48,24 @@ export default function LoginScreen() {
         {/* Cartão de Login */}
         <View style={styles.loginCard}>
           <View style={styles.inputGroup}>
-  <Text style={styles.label}>E-mail</Text>
-  <TextInput
-    style={[
-      styles.input, 
-      form.email.length > 0 && !validateEmail(form.email) && { borderColor: 'red' }
-    ]}
-    placeholder="Seu e-mail"
-    placeholderTextColor="#999"
-    keyboardType="email-address"
-    autoCapitalize="none"
-    autoCorrect={false}
-    value={form.email}
-    onChangeText={(val) => setForm({ ...form, email: val })}
-  />
-  {form.email.length > 0 && !validateEmail(form.email) && (
-    <Text style={{ color: 'red', fontSize: 12 }}>E-mail inválido</Text>
-  )}
-</View>
+            <Text style={styles.label}>E-mail</Text>
+            <TextInput
+              style={[
+                styles.input,
+                form.email.length > 0 && !validateEmail(form.email) && { borderColor: 'red' }
+              ]}
+              placeholder="Seu e-mail"
+              placeholderTextColor="#999"
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
+              value={form.email}
+              onChangeText={(val) => setForm({ ...form, email: val })}
+            />
+            {form.email.length > 0 && !validateEmail(form.email) && (
+              <Text style={{ color: 'red', fontSize: 12 }}>E-mail inválido</Text>
+            )}
+          </View>
 
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Senha</Text>
@@ -104,7 +104,7 @@ export default function LoginScreen() {
       </KeyboardAvoidingView>
     </ImageBackground>
   );
-  
+
 }
 
 const validateEmail = (email: string) => {
@@ -120,7 +120,7 @@ const styles = StyleSheet.create({
     flex: 1,
     width: "100%",
     height: "100%"
-    
+
   },
   overlay: {
     flex: 1,

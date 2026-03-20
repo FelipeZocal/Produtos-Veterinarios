@@ -8,7 +8,7 @@ import {
   StatusBar,
   SafeAreaView, // Importante para responsividade em telas com "notch"
 } from "react-native";
-import { Beef, LogIn, UserPlus } from "lucide-react-native"; // Usei Beef por segurança, conforme erro anterior
+import { Beef, LogIn, UserPlus } from "lucide-react-native";
 import { Link } from "expo-router";
 
 export default function WelcomeScreen() {
@@ -72,7 +72,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#000", // Fundo preto caso a imagem demore a carregar
   },
   background: {
-    flex: 1, 
+    flex: 1,
     width: "100%",
     height: "100%"
   },
