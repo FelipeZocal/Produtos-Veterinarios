@@ -28,7 +28,6 @@ export default function WelcomeScreen() {
         <View style={styles.overlay}>
           {/* Logo e Título */}
           <View style={styles.header}>
-            /
             <View style={styles.iconCircle}>
               <Beef size={60} color="#2D5A27" />
             </View>

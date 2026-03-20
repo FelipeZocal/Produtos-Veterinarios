@@ -10,6 +10,7 @@ import {
   ImageBackground,
   TouchableOpacity,
   TextInput,
+  Platform
 } from "react-native";
 import { Link, useRouter } from "expo-router";
 
@@ -24,9 +25,14 @@ export default function RegisterScreen() {
 
   const handleSignUp = async () => {
     if (!form.email || !form.senha || !form.nome) {
-      Alert.alert("Erro", "Preencha todos os campos obrigatórios.");
+      if (Platform.OS === "web") {
+        window.alert("Erro: Preencha todos os campos obrigatórios.");
+      } else {
+        Alert.alert("Erro", "Preencha todos os campos obrigatórios.");
+      }
       return;
     }
+
     try {
       // 1. Cria o usuário no Auth
       const userCredential = await createUserWithEmailAndPassword(
@@ -43,13 +49,21 @@ export default function RegisterScreen() {
         email: form.email,
         createdAt: new Date(),
       });
+      
       console.log("Usuário cadastrado com sucesso:", user.uid);
 
-      Alert.alert("Sucesso!", "Conta criada com sucesso.", [
-        { text: "Ir para o Login", onPress: () => router.replace("/(tabs)/login") },
-      ]);
+      // 3. Alerta de sucesso e Redirecionamento
+      if (Platform.OS === "web") {
+        window.alert("Conta criada com sucesso!");
+        router.replace("/login"); // Vai direto para o login na web
+      } else {
+        Alert.alert("Sucesso!", "Conta criada com sucesso.", [
+          { text: "Ir para o Login", onPress: () => router.replace("/login") },
+        ]);
+      }
+
     } catch (error: any) {
-      console.error("ERRO COMPLETO:", error); // Isso vai mostrar o erro exato no VS Code
+      console.error("ERRO COMPLETO:", error); 
 
       let mensagem = "Ocorreu um erro inesperado.";
 
@@ -60,7 +74,11 @@ export default function RegisterScreen() {
       if (error.code === "permission-denied")
         mensagem = "Erro de permissão no banco de dados.";
 
-      Alert.alert("Erro ao cadastrar", mensagem);
+      if (Platform.OS === "web") {
+        window.alert("Erro ao cadastrar: " + mensagem);
+      } else {
+        Alert.alert("Erro ao cadastrar", mensagem);
+      }
     }
   };
 
@@ -133,7 +151,7 @@ export default function RegisterScreen() {
             <Text style={styles.label}>Senha</Text>
             <TextInput
               style={styles.input}
-              placeholder="******"
+              placeholder="Sua senha"
               placeholderTextColor="#999"
               secureTextEntry
               value={form.senha}

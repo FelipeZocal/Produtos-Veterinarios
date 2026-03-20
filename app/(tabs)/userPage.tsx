@@ -10,6 +10,7 @@ import {
   StatusBar,
   Modal,
   Pressable,
+  Platform,
 } from "react-native";
 
 import {
@@ -50,45 +51,45 @@ export default function UserScreen() {
     }
   };
 
-  const handleLogout = () => {
-    setMenuVisible(false); // 1. Manda o menu fechar
+  const handleLogout = async () => {
+    setMenuVisible(false); // Fecha o menu na hora
 
-    // 2. Aguarda 300 milissegundos para o menu terminar a animação de fechar
-    setTimeout(() => {
+    // Se estiver rodando no navegador (Web)
+    if (Platform.OS === "web") {
+      const confirmacao = window.confirm("Deseja realmente sair da sua conta?");
+      if (confirmacao) {
+        try {
+          await signOut(auth);
+        } catch (error) {
+          window.alert("Erro: Não foi possível encerrar a sessão.");
+        }
+      }
+    } 
+    // Se estiver rodando no Celular (Android/iOS)
+    else {
       Alert.alert(
         "Sair", 
         "Deseja realmente sair da sua conta?", 
         [
-          { 
-            text: "Cancelar", 
-            style: "cancel" 
-          },
+          { text: "Cancelar", style: "cancel" },
           {
             text: "Sair",
             style: "destructive",
             onPress: async () => {
               try {
-                console.log("1. Tentando deslogar do Firebase...");
                 await signOut(auth);
-                console.log("2. Deslogou com sucesso! Redirecionando...");
-                
-                // Vamos tentar forçar a navegação direta aqui para garantir
-                // Troque "/" pelo caminho exato do seu arquivo de login, se for diferente
-                router.replace("/"); 
               } catch (error) {
-                console.error("Erro no logout:", error);
                 Alert.alert("Erro", "Não foi possível encerrar a sessão.");
               }
             },
           },
         ]
       );
-    }, 300);
+    }
   };
 
 
   useEffect(() => {
-    // Esse ouvinte monitora em tempo real se o usuário está logado ou não
     const unsubscribe = auth.onAuthStateChanged(async (user) => {
       if (user) {
         try {
@@ -101,8 +102,8 @@ export default function UserScreen() {
           console.error("Erro ao buscar dados do usuário:", error);
         }
       } else {
-        router.replace("/login");
-
+        // Usa o caminho exato que você usou na WelcomeScreen
+        router.replace("/(tabs)/login"); 
       }
     });
 
