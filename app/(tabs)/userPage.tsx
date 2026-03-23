@@ -20,9 +20,9 @@ import {
   ClipboardList,
   Bell,
   User,
-  Settings, // Adicionado
-  LogOut,   // Adicionado
-  UserCircle // Adicionado
+  Settings,
+  LogOut,
+  UserCircle
 } from "lucide-react-native";
 import { auth, db } from "../../config/firebaseConfig";
 import { doc, getDoc } from "firebase/firestore";
