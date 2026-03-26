@@ -18,7 +18,6 @@ import {
 import {
   Bell,
   User,
-  Settings,
   LogOut,
   UserCircle,
   Syringe,

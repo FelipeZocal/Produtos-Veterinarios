@@ -10,7 +10,6 @@ import {
   Modal,
   TextInput,
   Alert,
-  Platform,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { auth, db } from "../../config/firebaseConfig";
