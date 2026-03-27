@@ -33,7 +33,6 @@ export default function UserPage() {
     celular: "",
   });
 
-  // Estados para o Modal de Edição
   const [modalVisible, setModalVisible] = useState(false);
   const [editType, setEditType] = useState<"email" | "celular" | null>(null);
   const [editValue, setEditValue] = useState("");
@@ -257,7 +256,6 @@ export default function UserPage() {
 }
 
 const styles = StyleSheet.create({
-  // ... (MANTIVE SEUS ESTILOS ORIGINAIS DO CONTAINER, HEADER, AVATAR, ETC AQUI)
   container: { flex: 1, backgroundColor: "#F8F9FA" },
   header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20, paddingTop: 20, paddingBottom: 10 },
   backButton: { padding: 8, backgroundColor: "#E8F5E9", borderRadius: 50 },
@@ -276,7 +274,6 @@ const styles = StyleSheet.create({
   infoValue: { fontSize: 16, color: "#333", fontWeight: "500" },
   divider: { height: 1, backgroundColor: "#F0F0F0", marginVertical: 5, marginLeft: 55 },
   
-  // --- NOVOS ESTILOS PARA EDIÇÃO ---
   editBtn: {
     padding: 8,
     backgroundColor: "#F8F9FA",
