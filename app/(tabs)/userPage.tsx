@@ -13,8 +13,8 @@ import {
   Platform,
   TextInput,
   ActivityIndicator,
+  Image,
 } from "react-native";
-
 import {
   Bell,
   User,
@@ -24,25 +24,14 @@ import {
   Plus,
   Trash2
 } from "lucide-react-native";
-import { auth, db } from "../../config/firebaseConfig";
-import { 
-  doc, 
-  getDoc, 
-  collection, 
-  addDoc, 
-  getDocs, 
-  updateDoc, 
-  deleteDoc 
-} from "firebase/firestore";
+import { auth, db } from "../../config/firebaseConfig"; 
+import { doc, getDoc } from "firebase/firestore"; 
 import { signOut } from "firebase/auth";
 import { useRouter } from "expo-router";
 
-// Tipagem atualizada para receber a quantidade
-interface Medicamento {
-  id: string;
-  title: string;
-  quantity: string;
-}
+// Importando Model e Service atualizados
+import { ProdutoVet } from "../model/ProdutoVet";
+import { produtoService } from "../services/produtoService";
 
 export default function UserScreen() {
   const router = useRouter();
@@ -51,21 +40,25 @@ export default function UserScreen() {
   const [menuVisible, setMenuVisible] = useState(false);
 
   // Estados do CRUD
-  const [medicamentos, setMedicamentos] = useState<Medicamento[]>([]);
+  const [medicamentos, setMedicamentos] = useState<ProdutoVet[]>([]);
   const [loadingCrud, setLoadingCrud] = useState(false);
   const [modalCrudVisible, setModalCrudVisible] = useState(false);
+  
+  // Estados do Formulário
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [medTitle, setMedTitle] = useState("");
-  const [medQuantity, setMedQuantity] = useState(""); // Novo estado para a quantidade
+  const [medNome, setMedNome] = useState("");
+  const [medQuantidade, setMedQuantidade] = useState("");
+  const [medDescricao, setMedDescricao] = useState("");
+  const [medPreco, setMedPreco] = useState("");
+  const [medCategoria, setMedCategoria] = useState("");
+  const [medImagemUrl, setMedImagemUrl] = useState("");
 
   const toggleMenu = () => setMenuVisible(!menuVisible);
 
   const handleMenuOption = (option: string) => {
-    setMenuVisible(false); // Fecha o menu
-    
+    setMenuVisible(false);
     switch (option) {
       case "profile":
-        // Verifica se há um usuário logado
         if (!auth.currentUser) {
           if (Platform.OS === "web") {
             window.alert("É necessário realizar o login para acessar o perfil.");
@@ -73,7 +66,6 @@ export default function UserScreen() {
             Alert.alert("Acesso Restrito", "É necessário realizar o login para acessar o perfil.");
           }
         } else {
-          // Se tiver logado, vai para a tela
           router.push("/ownPerfil");
         }
         break;
@@ -88,123 +80,121 @@ export default function UserScreen() {
     if (Platform.OS === "web") {
       const confirmacao = window.confirm("Deseja realmente sair da sua conta?");
       if (confirmacao) {
-        try {
-          await signOut(auth);
-        } catch (error) {
-          window.alert("Erro: Não foi possível encerrar a sessão.");
-        }
+        try { await signOut(auth); } catch (error) { window.alert("Erro ao encerrar sessão."); }
       }
     } else {
-      Alert.alert(
-        "Sair",
-        "Deseja realmente sair da sua conta?",
-        [
-          { text: "Cancelar", style: "cancel" },
-          {
-            text: "Sair",
-            style: "destructive",
-            onPress: async () => {
-              try {
-                await signOut(auth);
-              } catch (error) {
-                Alert.alert("Erro", "Não foi possível encerrar a sessão.");
-              }
-            },
-          },
-        ]
-      );
+      Alert.alert("Sair", "Deseja realmente sair da sua conta?", [
+        { text: "Cancelar", style: "cancel" },
+        { text: "Sair", style: "destructive", onPress: async () => await signOut(auth) },
+      ]);
     }
   };
 
-  // --- FUNÇÕES DO CRUD DE MEDICAMENTOS ---
+  // --- FUNÇÕES DO CRUD USANDO O SERVICE ---
 
-  const fetchMedicamentos = async (uid: string) => {
+  const carregarProdutos = async (uid: string) => {
     setLoadingCrud(true);
     try {
-      const querySnapshot = await getDocs(collection(db, "users", uid, "medicamentos"));
-      const lista: Medicamento[] = [];
-      querySnapshot.forEach((doc) => {
-        // Agora busca a quantidade do banco também (com fallback para "0" caso não tenha)
-        lista.push({ 
-          id: doc.id, 
-          title: doc.data().title, 
-          quantity: doc.data().quantity || "0" 
-        });
-      });
+      const lista = await produtoService.buscarTodos(uid);
       setMedicamentos(lista);
     } catch (error) {
-      console.error("Erro ao buscar medicamentos:", error);
+      Alert.alert("Erro", "Não foi possível carregar os produtos.");
     } finally {
       setLoadingCrud(false);
     }
   };
 
-  const handleSaveMedicamento = async () => {
-    if (!medTitle.trim() || !userId) {
+  const handleSalvar = async () => {
+    if (!medNome.trim() || !userId) {
       Alert.alert("Aviso", "O nome do produto é obrigatório.");
       return;
     }
     
-    // Se a quantidade estiver vazia, salva como "0"
-    const qtdFinal = medQuantity.trim() ? medQuantity : "0";
+    const qtdFinal = medQuantidade.trim() ? medQuantidade : "0";
+    setLoadingCrud(true);
 
     try {
       if (editingId) {
-        const medRef = doc(db, "users", userId, "medicamentos", editingId);
-        await updateDoc(medRef, { 
-          title: medTitle,
-          quantity: qtdFinal
+        // UPDATE
+        await produtoService.atualizar(userId, editingId, {
+          nome: medNome,
+          quantidade: qtdFinal,
+          descricao: medDescricao,
+          preco: medPreco,
+          categoria: medCategoria,
+          imagemUrl: medImagemUrl,
         });
       } else {
-        await addDoc(collection(db, "users", userId, "medicamentos"), {
-          title: medTitle,
-          quantity: qtdFinal
+        // CREATE
+        await produtoService.adicionar(userId, {
+          nome: medNome,
+          quantidade: qtdFinal,
+          descricao: medDescricao,
+          preco: medPreco,
+          categoria: medCategoria,
+          imagemUrl: medImagemUrl,
         });
       }
       
       closeCrudModal();
-      fetchMedicamentos(userId);
+      carregarProdutos(userId);
     } catch (error) {
-      console.error("Erro ao salvar medicamento:", error);
-      Alert.alert("Erro", "Não foi possível salvar o medicamento.");
+      Alert.alert("Erro", "Não foi possível salvar o produto.");
+    } finally {
+      setLoadingCrud(false);
     }
   };
 
-  const handleDeleteMedicamento = async () => {
+  const handleDeletar = async () => {
     if (!editingId || !userId) return;
-
+    
+    setLoadingCrud(true);
     try {
-      await deleteDoc(doc(db, "users", userId, "medicamentos", editingId));
+      // DELETE
+      await produtoService.deletar(userId, editingId);
       closeCrudModal();
-      fetchMedicamentos(userId);
+      carregarProdutos(userId);
     } catch (error) {
-      console.error("Erro ao excluir medicamento:", error);
-      Alert.alert("Erro", "Não foi possível excluir o medicamento.");
+      Alert.alert("Erro", "Não foi possível excluir o produto.");
+    } finally {
+      setLoadingCrud(false);
     }
   };
 
-  const openEditModal = (med: Medicamento) => {
-    setEditingId(med.id);
-    setMedTitle(med.title);
-    setMedQuantity(med.quantity); // Preenche a quantidade atual no modal
+  const openEditModal = (produto: ProdutoVet) => {
+    setEditingId(produto.id!);
+    setMedNome(produto.nome);
+    setMedQuantidade(produto.quantidade);
+    setMedDescricao(produto.descricao || "");
+    setMedPreco(produto.preco || "");
+    setMedCategoria(produto.categoria || "");
+    setMedImagemUrl(produto.imagemUrl || "");
     setModalCrudVisible(true);
   };
 
   const openAddModal = () => {
     setEditingId(null);
-    setMedTitle("");
-    setMedQuantity(""); // Limpa o campo de quantidade ao abrir
+    setMedNome("");
+    setMedQuantidade("");
+    setMedDescricao("");
+    setMedPreco("");
+    setMedCategoria("");
+    setMedImagemUrl("");
     setModalCrudVisible(true);
   };
 
   const closeCrudModal = () => {
     setModalCrudVisible(false);
     setEditingId(null);
-    setMedTitle("");
-    setMedQuantity("");
+    setMedNome("");
+    setMedQuantidade("");
+    setMedDescricao("");
+    setMedPreco("");
+    setMedCategoria("");
+    setMedImagemUrl("");
   };
 
-  // --- FIM DAS FUNÇÕES CRUD ---
+  // --- EFEITOS ---
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async (user) => {
@@ -216,7 +206,7 @@ export default function UserScreen() {
             const fullName = userDoc.data().nome || "Produtor";
             setUserName(fullName.split(" ")[0]);
           }
-          fetchMedicamentos(user.uid);
+          carregarProdutos(user.uid);
         } catch (error) {
           console.error("Erro ao buscar dados do usuário:", error);
         }
@@ -272,7 +262,7 @@ export default function UserScreen() {
 
         {/* Grid de Produtos (CRUD) */}
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Produtos</Text>
+          <Text style={styles.sectionTitle}>Produtos Veterinários</Text>
           {loadingCrud && <ActivityIndicator size="small" color="#2D5A27" />}
         </View>
 
@@ -283,11 +273,19 @@ export default function UserScreen() {
               style={styles.gridItem}
               onPress={() => openEditModal(item)}
             >
-              <View style={styles.iconContainer}>
-                <Syringe color="#2D5A27" size={30} />
-              </View>
-              <Text style={styles.gridText} numberOfLines={1}>{item.title}</Text>
-              <Text style={styles.gridQuantity}>{item.quantity} un</Text>
+              {/* Exibe a imagem se houver, caso contrário exibe o ícone padrão */}
+              {item.imagemUrl ? (
+                <Image source={{ uri: item.imagemUrl }} style={styles.productImage} />
+              ) : (
+                <View style={styles.iconContainer}>
+                  <Syringe color="#2D5A27" size={30} />
+                </View>
+              )}
+              
+              <Text style={styles.gridText} numberOfLines={1}>{item.nome}</Text>
+              <Text style={styles.gridQuantity}>
+                {item.quantidade} un {item.preco ? `• R$ ${item.preco}` : ""}
+              </Text>
             </TouchableOpacity>
           ))}
 
@@ -306,11 +304,11 @@ export default function UserScreen() {
             <Bell color="#C62828" size={20} />
             <Text style={styles.alertTitle}>Lembretes</Text>
           </View>
-          <Text style={styles.alertText}>• Vacinação em 5 dias.</Text>
+          <Text style={styles.alertText}>• Vacinação do rebanho em 5 dias.</Text>
         </View>
       </ScrollView>
 
-      {/* Modal CRUD (Criar/Editar Medicamento) */}
+      {/* Modal CRUD (Criar/Editar Produto) */}
       <Modal visible={modalCrudVisible} transparent={true} animationType="slide" onRequestClose={closeCrudModal}>
         <View style={styles.crudModalOverlay}>
           <View style={styles.crudModalBox}>
@@ -318,35 +316,73 @@ export default function UserScreen() {
               {editingId ? "Editar Produto" : "Novo Produto"}
             </Text>
 
-            <TextInput
-              style={styles.input}
-              placeholder="Digite o nome do produto"
-              value={medTitle}
-              onChangeText={setMedTitle}
-              autoCapitalize="words"
-            />
+            <ScrollView style={{ maxHeight: 400 }} showsVerticalScrollIndicator={false}>
+              <TextInput
+                style={styles.input}
+                placeholder="Nome do produto (obrigatório)"
+                value={medNome}
+                onChangeText={setMedNome}
+                autoCapitalize="words"
+              />
 
-            {/* Novo TextInput para a Quantidade */}
-            <TextInput
-              style={styles.input}
-              placeholder="Quantidade (ex: 10)"
-              value={medQuantity}
-              onChangeText={setMedQuantity}
-              keyboardType="numeric" // Abre o teclado numérico
-            />
+              <TextInput
+                style={styles.input}
+                placeholder="Quantidade (ex: 10)"
+                value={medQuantidade}
+                onChangeText={setMedQuantidade}
+                keyboardType="numeric"
+              />
+
+              <TextInput
+                style={styles.input}
+                placeholder="Preço (ex: 150.00)"
+                value={medPreco}
+                onChangeText={setMedPreco}
+                keyboardType="numeric"
+              />
+
+              <TextInput
+                style={styles.input}
+                placeholder="Categoria (ex: Vacina, Ração)"
+                value={medCategoria}
+                onChangeText={setMedCategoria}
+                autoCapitalize="words"
+              />
+
+              <TextInput
+                style={[styles.input, { height: 80 }]}
+                placeholder="Descrição rápida"
+                value={medDescricao}
+                onChangeText={setMedDescricao}
+                multiline
+                textAlignVertical="top"
+              />
+
+              <TextInput
+                style={styles.input}
+                placeholder="Link da Imagem (URL)"
+                value={medImagemUrl}
+                onChangeText={setMedImagemUrl}
+                autoCapitalize="none"
+              />
+            </ScrollView>
 
             <View style={styles.crudButtonsContainer}>
-              <TouchableOpacity style={styles.btnCancel} onPress={closeCrudModal}>
+              <TouchableOpacity style={styles.btnCancel} onPress={closeCrudModal} disabled={loadingCrud}>
                 <Text style={styles.btnCancelText}>Cancelar</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity style={styles.btnSave} onPress={handleSaveMedicamento}>
-                <Text style={styles.btnSaveText}>Salvar</Text>
+              <TouchableOpacity style={styles.btnSave} onPress={handleSalvar} disabled={loadingCrud}>
+                {loadingCrud ? (
+                  <ActivityIndicator color="#FFF" size="small" />
+                ) : (
+                  <Text style={styles.btnSaveText}>Salvar</Text>
+                )}
               </TouchableOpacity>
             </View>
 
             {editingId && (
-              <TouchableOpacity style={styles.btnDelete} onPress={handleDeleteMedicamento}>
+              <TouchableOpacity style={styles.btnDelete} onPress={handleDeletar} disabled={loadingCrud}>
                 <Trash2 color="#C62828" size={20} />
                 <Text style={styles.btnDeleteText}>Excluir Produto</Text>
               </TouchableOpacity>
@@ -376,26 +412,26 @@ const styles = StyleSheet.create({
   bannerSubtitle: { color: "#E8F5E9", fontSize: 14, marginTop: 5, marginBottom: 15 },
   bannerBtn: { backgroundColor: "#FFF", paddingVertical: 8, paddingHorizontal: 15, borderRadius: 8, alignSelf: "flex-start" },
   bannerBtnText: { color: "#2D5A27", fontWeight: "bold", fontSize: 12 },
-  
   sectionHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 30, marginBottom: 15 },
   sectionTitle: { fontSize: 18, fontWeight: "bold", color: "#333" },
-  
   grid: { flexDirection: "row", flexWrap: "wrap", gap: "4%" },
-  gridItem: { backgroundColor: "#FFF", width: "48%", height: 130, borderRadius: 15, padding: 15, justifyContent: "center", alignItems: "center", marginBottom: 15, elevation: 2 },
-  gridItemAdd: { backgroundColor: "#E8F5E9", width: "48%", height: 130, borderRadius: 15, padding: 15, justifyContent: "center", alignItems: "center", marginBottom: 15, borderWidth: 1, borderColor: "#2D5A27", borderStyle: "dashed" },
+  gridItem: { backgroundColor: "#FFF", width: "48%", height: 140, borderRadius: 15, padding: 15, justifyContent: "center", alignItems: "center", marginBottom: 15, elevation: 2 },
+  gridItemAdd: { backgroundColor: "#E8F5E9", width: "48%", height: 140, borderRadius: 15, padding: 15, justifyContent: "center", alignItems: "center", marginBottom: 15, borderWidth: 1, borderColor: "#2D5A27", borderStyle: "dashed" },
   iconContainer: { backgroundColor: "#E8F5E9", padding: 12, borderRadius: 12, marginBottom: 10 },
-  gridText: { fontSize: 14, fontWeight: "600", color: "#333", textAlign: "center" },
-  gridQuantity: { fontSize: 12, color: "#666", marginTop: 4, fontWeight: "500" }, // Estilo adicionado para a quantidade no grid
   
+  // Novo estilo para a imagem do produto
+  productImage: { width: 60, height: 60, borderRadius: 12, marginBottom: 10, resizeMode: "cover" },
+
+  gridText: { fontSize: 14, fontWeight: "600", color: "#333", textAlign: "center" },
+  gridQuantity: { fontSize: 12, color: "#666", marginTop: 4, fontWeight: "500" },
   alertSection: { backgroundColor: "#FFF", borderRadius: 15, padding: 15, borderLeftWidth: 5, borderLeftColor: "#C62828", marginTop: 10 },
   alertHeader: { flexDirection: "row", alignItems: "center", marginBottom: 8 },
   alertTitle: { fontSize: 15, fontWeight: "bold", color: "#C62828", marginLeft: 8 },
   alertText: { color: "#555", fontSize: 13, marginBottom: 3 },
-
   crudModalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", alignItems: "center", padding: 20 },
   crudModalBox: { backgroundColor: "#FFF", width: "100%", borderRadius: 20, padding: 20, elevation: 5 },
   crudModalTitle: { fontSize: 18, fontWeight: "bold", color: "#333", marginBottom: 15, textAlign: "center" },
-  input: { borderWidth: 1, borderColor: "#DDD", borderRadius: 10, padding: 12, fontSize: 16, color: "#333", backgroundColor: "#F9F9F9", marginBottom: 15 }, // Ajustei a margem
+  input: { borderWidth: 1, borderColor: "#DDD", borderRadius: 10, padding: 12, fontSize: 16, color: "#333", backgroundColor: "#F9F9F9", marginBottom: 15 },
   crudButtonsContainer: { flexDirection: "row", justifyContent: "space-between", gap: 10, marginTop: 10 },
   btnCancel: { flex: 1, padding: 12, borderRadius: 10, backgroundColor: "#EEE", alignItems: "center" },
   btnCancelText: { color: "#333", fontWeight: "bold", fontSize: 16 },
