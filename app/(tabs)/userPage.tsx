@@ -80,7 +80,7 @@ export default function UserScreen() {
     if (Platform.OS === "web") {
       const confirmacao = window.confirm("Deseja realmente sair da sua conta?");
       if (confirmacao) {
-        try { await signOut(auth); } catch (error) { window.alert("Erro ao encerrar sessão."); }
+        try { await signOut(auth); } catch (error: any) { window.alert("Erro ao encerrar sessão."); }
       }
     } else {
       Alert.alert("Sair", "Deseja realmente sair da sua conta?", [
@@ -97,7 +97,7 @@ export default function UserScreen() {
     try {
       const lista = await produtoService.buscarTodos(uid);
       setMedicamentos(lista);
-    } catch (error) {
+    } catch (error: any) {
       Alert.alert("Erro", "Não foi possível carregar os produtos.");
     } finally {
       setLoadingCrud(false);
@@ -154,7 +154,7 @@ export default function UserScreen() {
       await produtoService.deletar(userId, editingId);
       closeCrudModal();
       carregarProdutos(userId);
-    } catch (error) {
+    } catch (error: any) {
       Alert.alert("Erro", "Não foi possível excluir o produto.");
     } finally {
       setLoadingCrud(false);

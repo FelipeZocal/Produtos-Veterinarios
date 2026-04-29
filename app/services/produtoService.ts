@@ -9,10 +9,50 @@ import {
 } from "firebase/firestore";
 import { ProdutoVet } from "../model/ProdutoVet";
 
+// ==========================================
+// CONFIGURAÇÕES DO JSONBIN.IO
+// ==========================================
+const BIN_ID = "69f1512c856a682189849727"; // Cole o ID do seu Bin
+const API_KEY = "$2a$10$pnulouZc41jNP9YhnMZ.NewlzETi8jPqwTUWUgix3aEu3tcRBUylu"; // Cole sua Master Key (Começa com $2a$10$...)
+const BASE_URL = `https://api.jsonbin.io/v3/b/${"69f1512c856a682189849727"}`;
+
+const headers = {
+  "Content-Type": "application/json",
+  "X-Master-Key": API_KEY,
+};
+
+// --- Funções Auxiliares JSONBin ---
+const fetchJsonBin = async () => {
+  try {
+    const response = await fetch(BASE_URL, { headers });
+    if (!response.ok) return [];
+    const data = await response.json();
+    return data.record.produtos || [];
+  } catch (error) {
+    console.error("Falha ao ler JSONBin:", error);
+    return [];
+  }
+};
+
+const updateJsonBin = async (produtos: any[]) => {
+  try {
+    await fetch(BASE_URL, {
+      method: "PUT",
+      headers,
+      body: JSON.stringify({ produtos }),
+    });
+  } catch (error) {
+    console.error("Falha ao atualizar JSONBin:", error);
+  }
+};
+// ==========================================
+
 export const produtoService = {
-  // CREATE: Adicionar um novo produto com os novos campos
+  
+  // CREATE: Adicionar no Firebase e espelhar no JSONBin
   adicionar: async (userId: string, produto: ProdutoVet) => {
     try {
+      // 1. SALVA NO FIREBASE (Original)
       const docRef = await addDoc(collection(db, "users", userId, "medicamentos"), {
         nome: produto.nome,
         quantidade: produto.quantidade,
@@ -21,7 +61,22 @@ export const produtoService = {
         categoria: produto.categoria || "",
         imagemUrl: produto.imagemUrl || "",
       });
-      console.log("Produto salvo com sucesso!");
+
+      // 2. SALVA NO JSONBIN (Nova Integração)
+      const produtosBin = await fetchJsonBin();
+      produtosBin.push({
+        id: docRef.id, // Usa o mesmo ID gerado pelo Firebase para manter sincronizado
+        userId: userId, // Identificador de quem é o dono do produto
+        nome: produto.nome,
+        quantidade: produto.quantidade,
+        descricao: produto.descricao || "",
+        preco: produto.preco || "",
+        categoria: produto.categoria || "",
+        imagemUrl: produto.imagemUrl || "",
+      });
+      await updateJsonBin(produtosBin);
+
+      console.log("Produto salvo com sucesso no Firebase e JSONBin!");
       return docRef.id;
     } catch (error) {
       console.error("Erro ao adicionar produto no Service:", error);
@@ -29,7 +84,7 @@ export const produtoService = {
     }
   },
 
-  // READ: Buscar todos os produtos, agora trazendo a imagem e detalhes
+  // READ: Busca do Firebase (mantido para performance)
   buscarTodos: async (userId: string): Promise<ProdutoVet[]> => {
     try {
       const querySnapshot = await getDocs(collection(db, "users", userId, "medicamentos"));
@@ -54,23 +109,43 @@ export const produtoService = {
     }
   },
 
-  // UPDATE: Atualizar um produto existente
+  // UPDATE: Atualiza no Firebase e reflete no JSONBin
   atualizar: async (userId: string, produtoId: string, dadosAtualizados: Partial<ProdutoVet>) => {
     try {
+      // 1. ATUALIZA NO FIREBASE
       const docRef = doc(db, "users", userId, "medicamentos", produtoId);
       await updateDoc(docRef, dadosAtualizados);
-      console.log("Produto atualizado com sucesso!");
+
+      // 2. ATUALIZA NO JSONBIN
+      const produtosBin = await fetchJsonBin();
+      const index = produtosBin.findIndex((p: any) => p.id === produtoId && p.userId === userId);
+      
+      if (index !== -1) {
+        produtosBin[index] = { ...produtosBin[index], ...dadosAtualizados };
+        await updateJsonBin(produtosBin);
+      }
+
+      console.log("Produto atualizado com sucesso em ambas as bases!");
     } catch (error) {
       console.error("Erro ao atualizar produto no Service:", error);
       throw error;
     }
   },
 
-  // DELETE: Excluir um produto
+  // DELETE: Exclui no Firebase e no JSONBin
   deletar: async (userId: string, produtoId: string) => {
     try {
+      // 1. DELETA NO FIREBASE
       await deleteDoc(doc(db, "users", userId, "medicamentos", produtoId));
-      console.log("Produto deletado com sucesso!");
+
+      // 2. DELETA NO JSONBIN
+      const produtosBin = await fetchJsonBin();
+      const produtosFiltrados = produtosBin.filter(
+        (p: any) => !(p.id === produtoId && p.userId === userId)
+      );
+      await updateJsonBin(produtosFiltrados);
+
+      console.log("Produto deletado com sucesso de ambas as bases!");
     } catch (error) {
       console.error("Erro ao deletar produto no Service:", error);
       throw error;
